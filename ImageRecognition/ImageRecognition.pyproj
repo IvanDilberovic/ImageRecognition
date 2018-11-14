@@ -4,14 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>eea66127-a0d9-4754-82d1-46a9626e52f7</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Zavrsni_Keras_Flask.py</StartupFile>
+    <StartupFile>Zavrsni_Keras_Test.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>ImageRecognition</Name>
     <RootNamespace>ImageRecognition</RootNamespace>
-    <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
+    <InterpreterId>Global|PythonCore|3.5</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,9 +22,12 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <InterpreterReference Include="Global|ContinuumAnalytics|Anaconda36-64" />
+    <InterpreterReference Include="Global|PythonCore|3.5" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Check.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Zavrsni_Keras_Flask.py" />
     <Compile Include="Zavrsni_Keras_Test.py" />
     <Compile Include="Zavrsni_Keras_Train.py" />

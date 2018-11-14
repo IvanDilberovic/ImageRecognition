@@ -1,8 +1,12 @@
 import os
+import keras
+from os.path import exists, join
 import PIL
+import pydot
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.datasets import mnist
+from keras.callbacks import TensorBoard
 from keras.preprocessing import image
 from keras.models import Sequential, load_model
 from keras.layers.core import Dense, Dropout, Activation, Flatten
@@ -13,9 +17,11 @@ from keras import layers
 from keras import models
 K.set_image_dim_ordering('th')
 
+
 # Training MNIST covnet based heavily on https://github.com/keras-team/keras/blob/master/examples/mnist_cnn.py
 
 batch_size = 128
+
 nb_classes = 10
 nb_epoch = 12
 
@@ -44,6 +50,7 @@ print('X_train shape:', X_train.shape)
 print(X_train.shape[0], 'train samples')
 print(X_test.shape[0], 'test samples')
 
+
 # one hot vector
 Y_train = np_utils.to_categorical(y_train, nb_classes)
 Y_test = np_utils.to_categorical(y_test, nb_classes)
@@ -68,11 +75,28 @@ model.add(Dropout(0.5))
 model.add(Dense(nb_classes)) 
 model.add(Activation('softmax'))
 
-
 model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=["accuracy"])
 
 # Learn
 history = model.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, verbose=1, validation_data=(X_test, Y_test))
+
+# Plot training & validation accuracy values
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
 
 print('Training over.')
 
@@ -84,7 +108,7 @@ print('Test accuracy:', score[1])
 
 print('Saving the model')
 
-save_model_name = "moj_model.h5"
+save_model_name = "moj_model_test.h5"
 save_model_path = os.getcwd() + "/save/"
 
 model.save(os.path.join(save_model_path,save_model_name),include_optimizer = True)
