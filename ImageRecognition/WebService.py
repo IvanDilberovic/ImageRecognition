@@ -18,6 +18,7 @@ import matplotlib.cm as cm
 import numpy.ma as ma
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from keras import backend as K
+import tensorflow as tf
 K.set_image_dim_ordering('th')
 
 #For 2D data (e.g.  image), "tf" assumes (rows, cols, channels) while "th"
@@ -25,15 +26,17 @@ K.set_image_dim_ordering('th')
 app = Flask(__name__)
 CORS(app)
 
-load_model_name = "moj_model.h5"
+load_model_name = "moj_model_test.h5"
 load_model_path = os.getcwd() + "/save/"
 model = load_model(os.path.join(load_model_path,load_model_name))
+model._make_predict_function() 
+graph = tf.get_default_graph()
 print('Load modela gotov, printam summary...')
 model.summary()
 
 #Function for saving images from layers
 def SaveLayerOutput(img_for_prediction):
-
+        
     def conv2d_1_function(X):    
         return _conv2d_1_f([0] + [X])
 
@@ -52,26 +55,9 @@ def SaveLayerOutput(img_for_prediction):
     def dropout_1_function(X):    
         return _dropout_1_f([0] + [X])
 
-    #def deprocess_image(x):
-    ## normalize tensor: center on 0., ensure std is 0.1
-
-    #    with np.errstate(divide="raise"):
-            
-    #        x -= x.mean()
-    #        x /= (x.std() + 1e-5)
-    #        x *= 0.1
-            
-    #        # clip to [0, 1]
-    #        x += 0.5
-    #        x = np.clip(x, 0, 1)
-            
-    #        # convert to RGB array
-    #        x *= 255
-    #        x = x.transpose((1, 0))
-    #        x = np.clip(x, 0, 255).astype('uint8')
-    #        x = np.nan_to_num(x)
-    #        return x
-
+    def function_for_image(X):
+        return _f([0] + [X])
+        
     def nice_imshow(ax, data, vmin=None, vmax=None, cmap=None, name=None,size=None):
         """Wrapper around pl.imshow"""
         if cmap is None:
@@ -149,8 +135,6 @@ def SaveLayerOutput(img_for_prediction):
 
         return mosaic
 
-    
-
     conv2d_1 = model.get_layer('conv2d_1')
     activation_1 = model.get_layer('activation_1')
     conv2d_2 = model.get_layer('conv2d_2')
@@ -160,7 +144,7 @@ def SaveLayerOutput(img_for_prediction):
 
 
     inputs = [K.learning_phase()] + model.inputs
-
+    
     _conv2d_1_f = K.function(inputs, [conv2d_1.output])
     _activation_1_f = K.function(inputs, [activation_1.output])
     _conv2d_2_f = K.function(inputs, [conv2d_2.output])
@@ -231,13 +215,26 @@ def index():
 
 @app.route('/api/GetPrediction', methods=['GET', 'POST'])
 def get_prediction():   
-
+    
     try:
         imageData = request.json['slika'].split('base64,')[1]   
     
         output = BytesIO(base64.b64decode(imageData))
         output.seek(0)
+
         image = Image.open(output).convert('L') #need to convert because the image comes as ARGB
+
+        #background = Image.new("RGB", image.size, (0, 0, 0))
+        #background.paste(image, mask=image.split()[3])
+        #background.save(os.getcwd() + "/images/orginal.png") 
+        #background.thumbnail(size=(28,28),resample=Image.ANTIALIAS)
+        #background.save(os.getcwd() + "/images/resized.png") 
+        #background = background.convert('L')
+
+        #img_for_prediction = np.array(background).reshape(1,1,28,28)
+        #img_for_prediction = img_for_prediction.astype('float32')
+        #img_for_prediction /= 255
+
         image.save(os.getcwd() + "/images/orginal.png")  
         image.thumbnail(size=(28,28),resample=Image.ANTIALIAS)
         image.save(os.getcwd() + "/images/resized.png")  
@@ -245,22 +242,20 @@ def get_prediction():
         img_for_prediction = np.array(image).reshape(1,1,28,28)
         img_for_prediction = img_for_prediction.astype('float32')
         img_for_prediction /= 255
-    
-        result = model.predict(img_for_prediction,batch_size=1,verbose=1)
-
-        listaRezultata = result[0]
-               
-        list = []
-
-        for i in sorted(enumerate(listaRezultata), key=lambda x:x[1], reverse=True):
-            dic = {}
-            dic["key"] = i[0]
-            dic["value"] = '{0:.16f}'.format(i[1])
-            list.append(dic)    
-    
-        lista = SaveLayerOutput(img_for_prediction)    
-
-        return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list, 'images' : lista})
+        
+        global graph
+        with graph.as_default():
+            result = model.predict(img_for_prediction,batch_size=1,verbose=1)               
+            listaRezultata = result[0]               
+            list = []
+            for i in sorted(enumerate(listaRezultata), key=lambda x:x[1], reverse=True):
+                dic = {}
+                dic["key"] = i[0]
+                dic["value"] = '{0:.16f}'.format(i[1])
+                list.append(dic)        
+            lista = SaveLayerOutput(img_for_prediction)            
+            #lista = [] #ovo je samo za test
+            return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list, 'images' : lista})
 
     except Exception as e:
         print(str(e))
@@ -285,7 +280,17 @@ def get_images():
          return print(str(ex))
          return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
          
-    
-   
+@app.route('/api/GetImage')    
+def get_image():
+
+    try:
+         
+         return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': None, 'images' : base_64})
+
+    except Exception as ex:
+         return print(str(ex))
+         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
+
+
 if __name__ == '__main__':
     app.run(debug=False)

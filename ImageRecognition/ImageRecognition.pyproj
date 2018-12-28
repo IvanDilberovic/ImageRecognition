@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>eea66127-a0d9-4754-82d1-46a9626e52f7</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Zavrsni_Keras_Test.py</StartupFile>
+    <StartupFile>WebService.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -28,9 +28,9 @@
     <Compile Include="Check.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Zavrsni_Keras_Flask.py" />
-    <Compile Include="Zavrsni_Keras_Test.py" />
-    <Compile Include="Zavrsni_Keras_Train.py" />
+    <Compile Include="WebService.py" />
+    <Compile Include="Keras_Test.py" />
+    <Compile Include="Keras_Train.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />

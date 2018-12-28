@@ -96,9 +96,8 @@ function createCanvas() {
 	}
 
 	function redraw() {
-		context.clearRect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
-
-		context.strokeStyle = "black"; //tu je bilo black
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height); // Clears the canvas
+        context.strokeStyle = "black"; //tu je bilo black
 		context.lineJoin = "round";
 		context.lineWidth = 15;
 

@@ -5,8 +5,6 @@ VisualStudioVersion = 15.0.27004.2006
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "ImageRecognition", "ImageRecognition\ImageRecognition.pyproj", "{EEA66127-A0D9-4754-82D1-46A9626E52F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageRecognitionWebApp", "ImageRecognitionWebApp\ImageRecognitionWebApp.csproj", "{AE61F743-CAF6-4932-9DA4-8670EA0F55B0}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,10 +13,6 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{EEA66127-A0D9-4754-82D1-46A9626E52F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EEA66127-A0D9-4754-82D1-46A9626E52F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AE61F743-CAF6-4932-9DA4-8670EA0F55B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AE61F743-CAF6-4932-9DA4-8670EA0F55B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AE61F743-CAF6-4932-9DA4-8670EA0F55B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AE61F743-CAF6-4932-9DA4-8670EA0F55B0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
