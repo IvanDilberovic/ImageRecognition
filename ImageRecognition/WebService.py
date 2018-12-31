@@ -16,7 +16,7 @@ from keras import utils
 from sklearn import preprocessing
 import matplotlib.cm as cm
 import numpy.ma as ma
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
 from keras import backend as K
 import tensorflow as tf
 K.set_image_dim_ordering('th')
@@ -31,35 +31,13 @@ load_model_path = os.getcwd() + "/save/"
 model = load_model(os.path.join(load_model_path,load_model_name))
 model._make_predict_function() 
 graph = tf.get_default_graph()
-print('Load modela gotov, printam summary...')
+print('Model loaded, printing summary...')
 model.summary()
 
-#Function for saving images from layers
-def SaveLayerOutput(img_for_prediction):
+global_image = None
+
+def nice_imshow(ax, data, vmin=None, vmax=None, cmap=None, name=None,size=None):
         
-    def conv2d_1_function(X):    
-        return _conv2d_1_f([0] + [X])
-
-    def activation_1_function(X):    
-        return _activation_1_f([0] + [X])
-
-    def conv2d_2_function(X):    
-        return _conv2d_2_f([0] + [X])
-
-    def activation_2_function(X):    
-        return _activation_2_f([0] + [X])
-
-    def max_pooling2d_1_function(X):    
-        return _max_pooling2d_1_f([0] + [X])
-
-    def dropout_1_function(X):    
-        return _dropout_1_f([0] + [X])
-
-    def function_for_image(X):
-        return _f([0] + [X])
-        
-    def nice_imshow(ax, data, vmin=None, vmax=None, cmap=None, name=None,size=None):
-        """Wrapper around pl.imshow"""
         if cmap is None:
             cmap = cm.jet
         if vmin is None:
@@ -75,139 +53,52 @@ def SaveLayerOutput(img_for_prediction):
         ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
         ax.xaxis.set_visible(False)
         ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-
-        byte_io = io.BytesIO()
-        #pl.savefig(buf,os.path.join(path,name), bbox_inches='tight', dpi=size) #maknuo dpi=size
+        
+        byte_io = io.BytesIO()        
         pl.savefig(byte_io,bbox_inches='tight', dpi=size) 
         byte_io.seek(0)
         base_64 = base64.b64encode(byte_io.read())
         base_64 = base_64.decode('utf-8')
-
-        #im = Image.open(buf)
-        #im.show()
-        
-        #im.figure.gca().yaxis.set_visible(False)
-        #im.figure.gca().xaxis.set_visible(False)
-
-        #im.figure.gca().xaxis.set_major_locator(matplotlib.ticker.NullLocator())        
-        #im.figure.gca().yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-                                      
-        #im.figure.canvas.draw()
- 
-        ## Get the RGBA buffer from the figure
-        #w,h = im.figure.canvas.get_width_height()
-        #buf = np.fromstring(im.figure.canvas.tostring_argb(), dtype=np.uint8)
-        #buf.shape = (w,h,4)
- 
-        ## canvas.tostring_argb give pixmap in ARGB mode.  Roll the ALPHA
-        ## channel to have it in RGBA mode
-        #buf = np.roll(buf, 3, axis = 2) 
-
-        #w, h, d = buf.shape
-
-        #pikcr = Image.frombytes("RGBA", (w ,h), buf.tostring())
-
-        #pikcr.show()
-
-        
+                      
         return name,base_64
-        #return os.path.basename(os.path.normpath(name))
 
-    def make_mosaic(imgs, nrows, ncols, border=1):
-        """
-        Given a set of images with all the same shape, makes a
-        mosaic with nrows and ncols
-        """
-        nimgs = imgs.shape[0]
-        imshape = imgs.shape[1:]
+def make_mosaic(imgs, nrows, ncols, border=1):
+        
+    nimgs = imgs.shape[0]
+    imshape = imgs.shape[1:]
     
-        #mosaic = ma.masked_all((nrows * imshape[0] + (nrows - 1) * border,
-        #ncols * imshape[1] + (ncols - 1) * border), dtype=np.float32)
-        mosaic = np.zeros((nrows * imshape[0] + (nrows - 1) * border, ncols * imshape[1] + (ncols - 1) * border), dtype=np.float32)
+    mosaic = np.zeros((nrows * imshape[0] + (nrows - 1) * border, ncols * imshape[1] + (ncols - 1) * border), dtype=np.float32)
     
-        paddedh = imshape[0] + border
-        paddedw = imshape[1] + border
+    paddedh = imshape[0] + border
+    paddedw = imshape[1] + border
 
-        for i in range(nimgs):
-            row = int(np.floor(i / ncols))
-            col = i % ncols        
-            mosaic[row * paddedh:row * paddedh + imshape[0], col * paddedw:col * paddedw + imshape[1]] = imgs[i]
+    for i in range(nimgs):
+        row = int(np.floor(i / ncols))
+        col = i % ncols        
+        mosaic[row * paddedh:row * paddedh + imshape[0], col * paddedw:col * paddedw + imshape[1]] = imgs[i]
 
-        return mosaic
+    return mosaic
 
-    conv2d_1 = model.get_layer('conv2d_1')
-    activation_1 = model.get_layer('activation_1')
-    conv2d_2 = model.get_layer('conv2d_2')
-    activation_2 = model.get_layer('activation_2')
-    max_pooling2d_1 = model.get_layer('max_pooling2d_1')
-    dropout_1 = model.get_layer('dropout_1')  
+def set_cmap(layer):
+    if layer == 'conv2d_1' or layer == 'conv2d_2':
+        return cm.gray
+    else:
+        return cm.jet
 
+def prepare_image(imageData):
+    output = BytesIO(base64.b64decode(imageData))
+    output.seek(0)
 
-    inputs = [K.learning_phase()] + model.inputs
-    
-    _conv2d_1_f = K.function(inputs, [conv2d_1.output])
-    _activation_1_f = K.function(inputs, [activation_1.output])
-    _conv2d_2_f = K.function(inputs, [conv2d_2.output])
-    _activation_2_f = K.function(inputs, [activation_2.output])
-    _max_pooling2d_1_f = K.function(inputs, [max_pooling2d_1.output])
-    _dropout_1_f = K.function(inputs, [dropout_1.output])
+    image = Image.open(output).convert('L') #need to convert because the image comes as ARGB
+    image.save(os.getcwd() + "/images/orginal.png")  
+    image.thumbnail(size=(28,28),resample=Image.ANTIALIAS)
+    image.save(os.getcwd() + "/images/resized.png")  
+         
+    img_for_prediction = np.array(image).reshape(1,1,28,28)
+    img_for_prediction = img_for_prediction.astype('float32')
+    img_for_prediction /= 255
 
-    lista = []
-    
-    C1 = conv2d_1_function(img_for_prediction)
-    C1 = np.squeeze(C1)
-    x,y = nice_imshow(pl.gca(), make_mosaic(C1, 3, 11),cmap=cm.binary, name="Conv2d_1.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    W = model.layers[0].get_weights()
-    W = np.squeeze(W[0])
-    W = np.rollaxis(W,2,0)
-    nice_imshow(pl.gca(), make_mosaic(W, 6, 6),cmap=cm.gray, name="Weights_1.png", size=50)
-
-    A1 = activation_1_function(img_for_prediction)
-    A1 = np.squeeze(A1)
-    x,y = nice_imshow(pl.gca(), make_mosaic(A1, 3, 11), cmap=cm.jet, name="Activation_1.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    C2 = conv2d_2_function(img_for_prediction)
-    C2 = np.squeeze(C2)    
-    x,y = nice_imshow(pl.gca(), make_mosaic(C2, 3, 11), cmap=cm.gray, name="Conv2d_2.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    A2 = activation_2_function(img_for_prediction)
-    A2 = np.squeeze(A2)    
-    x,y = nice_imshow(pl.gca(), make_mosaic(A2, 3, 11), cmap=cm.jet, name="Activation_2.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    MP = max_pooling2d_1_function(img_for_prediction)
-    MP = np.squeeze(MP)    
-    x,y = nice_imshow(pl.gca(), make_mosaic(MP, 3, 11), cmap=cm.jet, name="MaxPooling_1.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    DP = dropout_1_function(img_for_prediction)
-    DP = np.squeeze(DP)    
-    x,y = nice_imshow(pl.gca(), make_mosaic(DP, 3, 11), cmap=cm.jet, name="Dropout_1.png", size=400)
-    d = {}
-    d["name"] = x
-    d["picture"] = y
-    lista.append(d)
-
-    return lista    
+    return img_for_prediction
 
 @app.route('/')
 def index():
@@ -219,30 +110,8 @@ def get_prediction():
     try:
         imageData = request.json['slika'].split('base64,')[1]   
     
-        output = BytesIO(base64.b64decode(imageData))
-        output.seek(0)
-
-        image = Image.open(output).convert('L') #need to convert because the image comes as ARGB
-
-        #background = Image.new("RGB", image.size, (0, 0, 0))
-        #background.paste(image, mask=image.split()[3])
-        #background.save(os.getcwd() + "/images/orginal.png") 
-        #background.thumbnail(size=(28,28),resample=Image.ANTIALIAS)
-        #background.save(os.getcwd() + "/images/resized.png") 
-        #background = background.convert('L')
-
-        #img_for_prediction = np.array(background).reshape(1,1,28,28)
-        #img_for_prediction = img_for_prediction.astype('float32')
-        #img_for_prediction /= 255
-
-        image.save(os.getcwd() + "/images/orginal.png")  
-        image.thumbnail(size=(28,28),resample=Image.ANTIALIAS)
-        image.save(os.getcwd() + "/images/resized.png")  
-         
-        img_for_prediction = np.array(image).reshape(1,1,28,28)
-        img_for_prediction = img_for_prediction.astype('float32')
-        img_for_prediction /= 255
-        
+        img_for_prediction = prepare_image(imageData)
+                
         global graph
         with graph.as_default():
             result = model.predict(img_for_prediction,batch_size=1,verbose=1)               
@@ -253,44 +122,165 @@ def get_prediction():
                 dic["key"] = i[0]
                 dic["value"] = '{0:.16f}'.format(i[1])
                 list.append(dic)        
-            lista = SaveLayerOutput(img_for_prediction)            
-            #lista = [] #ovo je samo za test
-            return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list, 'images' : lista})
+            
+            return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list, 'images' : None})
 
     except Exception as e:
         print(str(e))
         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})        
 
-@app.route('/api/GetImages')
-def get_images():
-
-     try:
-         byte_io = BytesIO()
-         image = Image.open(os.path.dirname(os.getcwd()) + "/ImageRecognitionWebApp/Images/" + "Activation_1.png") 
-         image.save(byte_io, 'PNG')
-         byte_io.seek(0)
-         base_64 = base64.b64encode(byte_io.read())
-         base_64 = base_64.decode('utf-8')
-
-         #return
-         #send_file(base_64,'image/png')#mimetype='application/octet-stream'
-         return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': None, 'images' : base_64})
-
-     except Exception as ex:
-         return print(str(ex))
-         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
          
-@app.route('/api/GetImage')    
-def get_image():
+@app.route('/api/GetLayerImage', methods=['GET', 'POST'])    
+def get_layer_image():
 
     try:
-         
-         return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': None, 'images' : base_64})
+
+        layer = request.json['layer']
+        image = request.json['slika'].split('base64,')[1]  
+        image = prepare_image(image)
+        message = ''
+        list = []
+
+        if model.get_layer(layer).output.shape.ndims == 2:
+            message = 'Given layer does not have correct output dimensions so the image will not be created.'
+
+        global graph
+        with graph.as_default():
+            inputs = [K.learning_phase()] + model.inputs
+            _f = K.function(inputs,[model.get_layer(layer).output])        
+            C1 = _f([0] + [image])
+            C1 = np.squeeze(C1)
+            x,y = nice_imshow(pl.gca(), make_mosaic(C1, 3, 11),cmap=set_cmap(layer), name=layer + ".png", size=400)
+            d = {}
+            d["name"] = x
+            d["picture"] = y
+            list.append(d)
+
+        message = 'OK'       
+
+        print("GetLayerImage()", message)
+        
+        return jsonify({'success': True, 'status_code': 200, 'message': message, 'results': None, 'images' : list})
 
     except Exception as ex:
          return print(str(ex))
          return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
 
+@app.route('/api/GetLayerNames', methods=['GET'])    
+def get_layer_names():
+
+    try:
+        list = []
+        message = ''
+
+        for layer in model.layers:
+            if layer.output.shape.ndims == 2:
+                continue
+            list.append(layer.name)
+        
+        message = 'OK'
+
+        print("GetLayerNames()", message)
+
+        return jsonify({'success': True, 'status_code': 200, 'message': message, 'results': list})
+
+    except Exception as ex:
+         return print(str(ex))
+         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None})
+
+
+@app.route('/api/GetAllLayerImages', methods=['GET'])    
+def get_all_layer_images():
+
+    try:
+
+        img_for_prediction = request.json['slika'].split('base64,')[1]
+        img_for_prediction = prepare_image(img_for_prediction)
+
+        list = []
+        function_list = []
+        
+        global graph
+        with graph.as_default():
+
+            inputs = [K.learning_phase()] + model.inputs
+
+            for layer in model.layers:
+
+                print(layer.name)
+
+                if model.get_layer(layer.name).output.shape.ndims == 2:
+                    continue
+
+                _f = K.function(inputs,[model.get_layer(layer.name).output])
+                C1 = _f([0] + [img_for_prediction])
+                C1 = np.squeeze(C1)
+                x,y = nice_imshow(pl.gca(), make_mosaic(C1, 3, 11),cmap=set_cmap(layer), name=layer.name + ".png", size=400)
+                d = {}
+                d["name"] = x
+                d["picture"] = y
+                list.append(d)
+
+        message = 'OK'
+
+        print("GetAllLayerImages()", message)
+
+        return jsonify({'success': True, 'status_code': 200, 'message': message, 'results': None, 'images' : list})
+
+    except Exception as ex:
+         return print(str(ex))
+         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
+
+
+
+
+@app.route('/api/GetWeightImage', methods=['GET'])    
+def get_weight_image():
+
+    try:    
+       
+        message = ''
+        list = []
+                
+        global graph
+        with graph.as_default():
+             W1 = model.layers[0].get_weights()
+             W1 = np.squeeze(W1[0])
+             W1 = np.rollaxis(W1,2,0)
+             x,y = nice_imshow(pl.gca(), make_mosaic(W1, 6, 6),cmap=cm.gray,name="Weights_1.png", size=50)            
+             d = {}
+             d["name"] = x
+             d["picture"] = y
+             list.append(d)
+             
+             #W2 = model.layers[2].get_weights()[0]
+             #W2 = np.squeeze(W2)
+             #W2 = W2.reshape((W2.shape[0], W2.shape[1], W2.shape[2] * W2.shape[3])) 
+             ##W2 = np.rollaxis(W2,2,0)
+             #x,y = nice_imshow(pl.gca(), make_mosaic(W2, 6, 6),cmap=cm.jet,name="Weights_2.png", size=400)            
+             #d = {}
+             #d["name"] = x
+             #d["picture"] = y
+             #list.append(d)
+
+             ##W = np.squeeze(W)
+             ##W = W.reshape((W.shape[0], W.shape[1], W.shape[2]*W.shape[3])) 
+             ##fig, axs = plt.subplots(5,5, figsize=(8,8))
+             ##fig.subplots_adjust(hspace = .5, wspace=.001)
+             ##axs = axs.ravel()
+             ##for i in range(25):
+             ##    axs[i].imshow(W[:,:,i])
+             ##    axs[i].set_title(str(i))
+
+        message = 'OK'       
+
+        print("GetWeightImage()", message)
+        
+        return jsonify({'success': True, 'status_code': 200, 'message': message, 'results': None, 'images' : list})
+
+    except Exception as ex:
+         return print(str(ex))
+         return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})
 
 if __name__ == '__main__':
     app.run(debug=False)
