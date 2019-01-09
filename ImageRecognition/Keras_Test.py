@@ -134,3 +134,8 @@ pl.title('conv1_weights')
 nice_imshow(pl.gca(), make_mosaic(W, 6, 6), cmap=cm.binary)
 
 
+WW = np.rollaxis(np.squeeze(model.layers[2].get_weights()[0][:,:,:,0]),2,0)
+print("WW shape : ", WW.shape)
+pl.figure(figsize=(15, 15))
+pl.title('conv2_weights')
+nice_imshow(pl.gca(), make_mosaic(WW, 6, 6), cmap=cm.binary)

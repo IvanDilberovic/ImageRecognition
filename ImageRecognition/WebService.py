@@ -16,7 +16,7 @@ from keras import utils
 from sklearn import preprocessing
 import matplotlib.cm as cm
 import numpy.ma as ma
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from keras import backend as K
 import tensorflow as tf
 K.set_image_dim_ordering('th')
@@ -46,15 +46,12 @@ def nice_imshow(ax, data, vmin=None, vmax=None, cmap=None, name=None,size=None):
             vmax = data.max()
                                     
         im = ax.imshow(data, vmin=vmin, vmax=vmax, interpolation='nearest', cmap=cmap) 
-
-        path = os.path.dirname(os.getcwd()) + "/" + "ImageRecognitionWebApp" + "/" + "Images"
-
+                
         ax.yaxis.set_visible(False)
         ax.xaxis.set_major_locator(matplotlib.ticker.NullLocator())
         ax.xaxis.set_visible(False)
-        ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())
-        
-        byte_io = io.BytesIO()        
+        ax.yaxis.set_major_locator(matplotlib.ticker.NullLocator())        
+        byte_io = io.BytesIO()            
         pl.savefig(byte_io,bbox_inches='tight', dpi=size) 
         byte_io.seek(0)
         base_64 = base64.b64encode(byte_io.read())
@@ -83,7 +80,7 @@ def set_cmap(layer):
     if layer == 'conv2d_1' or layer == 'conv2d_2':
         return cm.gray
     else:
-        return cm.jet
+        return cm.binary
 
 def prepare_image(imageData):
     output = BytesIO(base64.b64decode(imageData))
@@ -107,8 +104,9 @@ def index():
 @app.route('/api/GetPrediction', methods=['GET', 'POST'])
 def get_prediction():   
     
+
     try:
-        imageData = request.json['slika'].split('base64,')[1]   
+        imageData = request.json['image'].split('base64,')[1]   
     
         img_for_prediction = prepare_image(imageData)
                 
@@ -123,11 +121,11 @@ def get_prediction():
                 dic["value"] = '{0:.16f}'.format(i[1])
                 list.append(dic)        
             
-            return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list, 'images' : None})
+            return jsonify({'success': True, 'status_code': 200, 'message': '', 'results': list})
 
     except Exception as e:
         print(str(e))
-        return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None, 'images' : None})        
+        return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None})        
 
          
 @app.route('/api/GetLayerImage', methods=['GET', 'POST'])    
@@ -136,25 +134,28 @@ def get_layer_image():
     try:
 
         layer = request.json['layer']
-        image = request.json['slika'].split('base64,')[1]  
+        image = request.json['image'].split('base64,')[1]  
         image = prepare_image(image)
         message = ''
         list = []
-
-        if model.get_layer(layer).output.shape.ndims == 2:
-            message = 'Given layer does not have correct output dimensions so the image will not be created.'
-
+                
         global graph
         with graph.as_default():
-            inputs = [K.learning_phase()] + model.inputs
-            _f = K.function(inputs,[model.get_layer(layer).output])        
-            C1 = _f([0] + [image])
-            C1 = np.squeeze(C1)
-            x,y = nice_imshow(pl.gca(), make_mosaic(C1, 3, 11),cmap=set_cmap(layer), name=layer + ".png", size=400)
-            d = {}
-            d["name"] = x
-            d["picture"] = y
-            list.append(d)
+
+            for layer in layer:
+                layer = layer["layer"]
+                if model.get_layer(layer).output.shape.ndims == 2:
+                    message = 'Given layer does not have correct output dimensions so the image will not be created.'
+
+                inputs = [K.learning_phase()] + model.inputs
+                _f = K.function(inputs,[model.get_layer(layer).output])        
+                C1 = _f([0] + [image])
+                C1 = np.squeeze(C1)
+                x,y = nice_imshow(pl.gca(), make_mosaic(C1, 4, 8),cmap=set_cmap(layer), name=layer + ".png", size=400)
+                d = {}
+                d["name"] = x
+                d["picture"] = y
+                list.append(d)
 
         message = 'OK'       
 
@@ -189,12 +190,12 @@ def get_layer_names():
          return jsonify({'success': False, 'status_code': 500, 'message': str(e), 'results': None})
 
 
-@app.route('/api/GetAllLayerImages', methods=['GET'])    
+@app.route('/api/GetAllLayerImages', methods=['GET', 'POST'])    
 def get_all_layer_images():
 
     try:
 
-        img_for_prediction = request.json['slika'].split('base64,')[1]
+        img_for_prediction = request.json['image'].split('base64,')[1]
         img_for_prediction = prepare_image(img_for_prediction)
 
         list = []
@@ -237,41 +238,25 @@ def get_all_layer_images():
 @app.route('/api/GetWeightImage', methods=['GET'])    
 def get_weight_image():
 
-    try:    
+    try:   
        
         message = ''
         list = []
                 
         global graph
         with graph.as_default():
-             W1 = model.layers[0].get_weights()
-             W1 = np.squeeze(W1[0])
-             W1 = np.rollaxis(W1,2,0)
-             x,y = nice_imshow(pl.gca(), make_mosaic(W1, 6, 6),cmap=cm.gray,name="Weights_1.png", size=50)            
+             W = np.rollaxis(np.squeeze(model.layers[0].get_weights()[0]),2,0)
+             x,y = nice_imshow(pl.gca(), make_mosaic(W, 4, 8),cmap=cm.gray,name="Weights_1.png", size=50)            
              d = {}
              d["name"] = x
              d["picture"] = y
              list.append(d)
-             
-             #W2 = model.layers[2].get_weights()[0]
-             #W2 = np.squeeze(W2)
-             #W2 = W2.reshape((W2.shape[0], W2.shape[1], W2.shape[2] * W2.shape[3])) 
-             ##W2 = np.rollaxis(W2,2,0)
-             #x,y = nice_imshow(pl.gca(), make_mosaic(W2, 6, 6),cmap=cm.jet,name="Weights_2.png", size=400)            
-             #d = {}
-             #d["name"] = x
-             #d["picture"] = y
-             #list.append(d)
-
-             ##W = np.squeeze(W)
-             ##W = W.reshape((W.shape[0], W.shape[1], W.shape[2]*W.shape[3])) 
-             ##fig, axs = plt.subplots(5,5, figsize=(8,8))
-             ##fig.subplots_adjust(hspace = .5, wspace=.001)
-             ##axs = axs.ravel()
-             ##for i in range(25):
-             ##    axs[i].imshow(W[:,:,i])
-             ##    axs[i].set_title(str(i))
-
+             WW = np.rollaxis(np.squeeze(model.layers[2].get_weights()[0][:,:,:,0]),2,0)
+             x,y = nice_imshow(pl.gca(), make_mosaic(WW, 4, 8),cmap=cm.gray,name="Weights_2.png", size=50)            
+             d = {}
+             d["name"] = x
+             d["picture"] = y
+             list.append(d)
         message = 'OK'       
 
         print("GetWeightImage()", message)
